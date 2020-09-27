@@ -103,6 +103,7 @@ class KatelloMixin():
         self._patch_organization_update_api()
         self._patch_subscription_index_api()
         self._patch_sync_plan_api()
+        self._patch_cv_filter_rule_api()
 
     def _patch_content_uploads_update_api(self):
         """This is a workaround for the broken content_uploads update apidoc in katello.
@@ -169,6 +170,22 @@ class KatelloMixin():
         _sync_plan_remove_products = next(x for x in _sync_plan_methods if x['name'] == 'remove_products')
         if next((x for x in _sync_plan_remove_products['params'] if x['name'] == 'organization_id'), None) is None:
             _sync_plan_remove_products['params'].append(_organization_parameter)
+
+    def _patch_cv_filter_rule_api(self):
+        """This is a workaround for missing params of CV Filter Rule update controller in Katello.
+           See https://projects.theforeman.org/issues/30908
+        """
+
+        _content_view_filter_rule_methods = self.foremanapi.apidoc['docs']['resources']['content_view_filter_rules']['methods']
+
+        _content_view_filter_rule_create = next(x for x in _content_view_filter_rule_methods if x['name'] == 'create')
+        _content_view_filter_rule_update = next(x for x in _content_view_filter_rule_methods if x['name'] == 'update')
+
+        for param_name in ['uuid', 'errata_ids', 'date_type', 'module_stream_ids']:
+            create_param = next((x for x in _content_view_filter_rule_create['params'] if x['name'] == param_name), None)
+            update_param = next((x for x in _content_view_filter_rule_update['params'] if x['name'] == param_name), None)
+            if create_param is not None and update_param is None:
+                _content_view_filter_rule_update['params'].append(create_param)
 
 
 class TaxonomyMixin(object):
@@ -260,7 +277,7 @@ class HostMixin(ParametersMixin):
             ptable=dict(type='entity'),
             pxe_loader=dict(choices=['PXELinux BIOS', 'PXELinux UEFI', 'Grub UEFI', 'Grub2 BIOS', 'Grub2 ELF',
                                      'Grub2 UEFI', 'Grub2 UEFI SecureBoot', 'Grub2 UEFI HTTP', 'Grub2 UEFI HTTPS',
-                                     'Grub2 UEFI HTTPS SecureBoot', 'iPXE Embedded', 'iPXE UEFI HTTP', 'iPXE Chain BIOS', 'iPXE Chain UEFI']),
+                                     'Grub2 UEFI HTTPS SecureBoot', 'iPXE Embedded', 'iPXE UEFI HTTP', 'iPXE Chain BIOS', 'iPXE Chain UEFI', 'None']),
             environment=dict(type='entity'),
             puppetclasses=dict(type='entity_list', resolve=False),
             config_groups=dict(type='entity_list'),
@@ -680,6 +697,25 @@ class ForemanAnsibleModule(AnsibleModule):
 
         return updated_entity
 
+    def _validate_supported_payload(self, resource, action, payload):
+        """Check whether the payload only contains supported keys.
+            Emits a warning for keys that are not part of the apidoc.
+
+            Parameters:
+                resource (string): Plural name of the api resource to check
+                action (string): Name of the action to check payload against
+                payload (dict): API paylod to be checked
+            Return value:
+                The payload as it can be submitted to the API
+        """
+        filtered_payload = self._resource_prepare_params(resource, action, payload)
+        # On Python 2 dict.keys() is just a list, but we need a set here.
+        unsupported_parameters = set(payload.keys()) - set(_recursive_dict_keys(filtered_payload))
+        if unsupported_parameters:
+            warn_msg = "The following parameters are not supported by your server when performing {0} on {1}: {2}. They were ignored."
+            self.warn(warn_msg.format(action, resource, unsupported_parameters))
+        return filtered_payload
+
     def _create_entity(self, resource, desired_entity, params, foreman_spec):
         """Create entity with given properties
 
@@ -692,6 +728,7 @@ class ForemanAnsibleModule(AnsibleModule):
                 The new current state if the entity
         """
         payload = _flatten_entity(desired_entity, foreman_spec)
+        self._validate_supported_payload(resource, 'create', payload)
         if not self.check_mode:
             if params:
                 payload.update(params)
@@ -737,7 +774,7 @@ class ForemanAnsibleModule(AnsibleModule):
                 old_value = sorted(old_value, key=operator.itemgetter(sort_key))
             if new_value != old_value:
                 payload[key] = value
-        if payload:
+        if self._validate_supported_payload(resource, 'update', payload):
             payload['id'] = current_entity['id']
             if not self.check_mode:
                 if params:
@@ -1216,6 +1253,15 @@ def _flatten_entity(entity, foreman_spec):
             else:
                 result[flat_name] = value
     return result
+
+
+def _recursive_dict_keys(a_dict):
+    """Find all keys of a nested dictionary"""
+    keys = set(a_dict.keys())
+    for _k, v in a_dict.items():
+        if isinstance(v, dict):
+            keys.update(_recursive_dict_keys(v))
+    return keys
 
 
 # Helper for (global, operatingsystem, ...) parameters
