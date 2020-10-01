@@ -28,6 +28,7 @@ TEST_PLAYBOOKS = [
     'image',
     'installation_medium',
     'inventory_plugin',
+    'job_invocation',
     'job_template',
     'katello_hostgroup',
     'katello_manifest',
@@ -67,10 +68,15 @@ TEST_PLAYBOOKS = [
 
 
 def pytest_addoption(parser):
-    parser.addoption("--record", action="store_true",
-                     help="record new server-responses")
+    parser.addoption(
+        "--vcrmode",
+        action="store",
+        default="replay",
+        choices=["replay", "record", "live"],
+        help="mode for vcr recording; one of ['replay', 'record', 'live']",
+    )
 
 
 @pytest.fixture
-def record(request):
-    return request.config.getoption('record')
+def vcrmode(request):
+    return request.config.getoption("vcrmode")

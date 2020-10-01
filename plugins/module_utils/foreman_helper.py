@@ -64,7 +64,7 @@ ENTITY_KEYS = dict(
     hostgroups='title',
     locations='title',
     operatingsystems='title',
-    # TODO: Organizations should be search by title (as foreman allow nested orgs) but that's not the case ATM.
+    # TODO: Organizations should be search by title (as foreman allows nested orgs) but that's not the case ATM.
     #       Applying this will need to record a lot of tests that is out of scope for the moment.
     # organizations='title',
     scap_contents='title',
@@ -74,6 +74,10 @@ ENTITY_KEYS = dict(
 
 
 def _exception2fail_json(msg='Generic failure: {0}'):
+    """
+    Decorator to convert Python exceptions into Ansible errors that can be reported to the user.
+    """
+
     def decor(f):
         @wraps(f)
         def inner(self, *args, **kwargs):
@@ -86,6 +90,16 @@ def _exception2fail_json(msg='Generic failure: {0}'):
 
 
 class KatelloMixin():
+    """
+    Katello Mixin to extend a :class:`ForemanAnsibleModule` (or any subclass) to work with Katello entities.
+
+    This includes:
+
+    * add a required ``organization`` parameter to the module
+    * add Katello to the list of required plugins
+    * apply Katello specific API patches
+    """
+
     def __init__(self, **kwargs):
         foreman_spec = dict(
             organization=dict(type='entity', required=True),
@@ -95,9 +109,8 @@ class KatelloMixin():
         required_plugins.append(('katello', ['*']))
         super(KatelloMixin, self).__init__(foreman_spec=foreman_spec, required_plugins=required_plugins, **kwargs)
 
-    @_exception2fail_json(msg="Failed to connect to Foreman server: {0}")
-    def connect(self):
-        super(KatelloMixin, self).connect()
+    def apply_apidoc_patches(self):
+        super(KatelloMixin, self).apply_apidoc_patches()
 
         self._patch_content_uploads_update_api()
         self._patch_organization_update_api()
@@ -106,8 +119,9 @@ class KatelloMixin():
         self._patch_cv_filter_rule_api()
 
     def _patch_content_uploads_update_api(self):
-        """This is a workaround for the broken content_uploads update apidoc in katello.
-            see https://projects.theforeman.org/issues/27590
+        """
+        This is a workaround for the broken content_uploads update apidoc in Katello.
+        See https://projects.theforeman.org/issues/27590
         """
 
         _content_upload_methods = self.foremanapi.apidoc['docs']['resources']['content_uploads']['methods']
@@ -121,8 +135,9 @@ class KatelloMixin():
         _content_upload_destroy_params_id['expected_type'] = 'string'
 
     def _patch_organization_update_api(self):
-        """This is a workaround for the broken organization update apidoc in katello.
-            see https://projects.theforeman.org/issues/27538
+        """
+        This is a workaround for the broken organization update apidoc in Katello.
+        See https://projects.theforeman.org/issues/27538
         """
 
         _organization_methods = self.foremanapi.apidoc['docs']['resources']['organizations']['methods']
@@ -132,8 +147,9 @@ class KatelloMixin():
         _organization_update_params_organization['required'] = False
 
     def _patch_subscription_index_api(self):
-        """This is a workaround for the broken subscriptions apidoc in katello.
-        https://projects.theforeman.org/issues/27575
+        """
+        This is a workaround for the broken subscriptions apidoc in Katello.
+        See https://projects.theforeman.org/issues/27575
         """
 
         _subscription_methods = self.foremanapi.apidoc['docs']['resources']['subscriptions']['methods']
@@ -143,8 +159,9 @@ class KatelloMixin():
         _subscription_index_params_organization_id['required'] = False
 
     def _patch_sync_plan_api(self):
-        """This is a workaround for the broken sync_plan apidoc in katello.
-            see https://projects.theforeman.org/issues/27532
+        """
+        This is a workaround for the broken sync_plan apidoc in Katello.
+        See https://projects.theforeman.org/issues/27532
         """
 
         _organization_parameter = {
@@ -172,8 +189,9 @@ class KatelloMixin():
             _sync_plan_remove_products['params'].append(_organization_parameter)
 
     def _patch_cv_filter_rule_api(self):
-        """This is a workaround for missing params of CV Filter Rule update controller in Katello.
-           See https://projects.theforeman.org/issues/30908
+        """
+        This is a workaround for missing params of CV Filter Rule update controller in Katello.
+        See https://projects.theforeman.org/issues/30908
         """
 
         _content_view_filter_rule_methods = self.foremanapi.apidoc['docs']['resources']['content_view_filter_rules']['methods']
@@ -189,6 +207,12 @@ class KatelloMixin():
 
 
 class TaxonomyMixin(object):
+    """
+    Taxonomy Mixin to extend a :class:`ForemanAnsibleModule` (or any subclass) to work with taxonomic entities.
+
+    This adds optional ``organizations`` and ``locations`` parameters to the module.
+    """
+
     def __init__(self, **kwargs):
         foreman_spec = dict(
             organizations=dict(type='entity_list'),
@@ -199,6 +223,19 @@ class TaxonomyMixin(object):
 
 
 class ParametersMixin(object):
+    """
+    Parameters Mixin to extend a :class:`ForemanAnsibleModule` (or any subclass) to work with entities that support parameters.
+
+    This allows to submit parameters to Foreman in the same request as modifying the main entity, thus making the parameters
+    available to any action that might be triggered when the entity is saved.
+
+    By default, parametes are submited to the API using the ``<entity_name>_parameters_attributes`` key.
+    If you need to override this, set the ``PARAMETERS_FLAT_NAME`` attribute to the key that shall be used instead.
+
+    This adds optional ``parameters`` parameter to the module. It also enhances the ``run()`` method to properly handle the
+    provided parameters.
+    """
+
     def __init__(self, **kwargs):
         self.entity_name = kwargs.pop('entity_name', self.entity_name_from_class)
         parameters_flat_name = getattr(self, "PARAMETERS_FLAT_NAME", None) or '{0}_parameters_attributes'.format(self.entity_name)
@@ -221,6 +258,14 @@ class ParametersMixin(object):
 
 
 class NestedParametersMixin(object):
+    """
+    Nested Parameters Mixin to extend a :class:`ForemanAnsibleModule` (or any subclass) to work with entities that support parameters,
+    but require them to be managed in separate API requests.
+
+    This adds optional ``parameters`` parameter to the module. It also enhances the ``run()`` method to properly handle the
+    provided parameters.
+    """
+
     def __init__(self, **kwargs):
         foreman_spec = dict(
             parameters=dict(type='nested_list', foreman_spec=parameter_foreman_spec),
@@ -262,6 +307,13 @@ class NestedParametersMixin(object):
 
 
 class HostMixin(ParametersMixin):
+    """
+    Host Mixin to extend a :class:`ForemanAnsibleModule` (or any subclass) to work with host-related entities (Hosts, Hostgroups).
+
+    This adds many optional parameters that are specific to Hosts and Hostgroups to the module.
+    It also includes :class:`ParametersMixin`.
+    """
+
     def __init__(self, **kwargs):
         foreman_spec = dict(
             compute_resource=dict(type='entity'),
@@ -352,6 +404,12 @@ class ForemanAnsibleModule(AnsibleModule):
 
     @contextmanager
     def api_connection(self):
+        """
+        Execute a given code block after connecting to the API.
+
+        When the block has finished, call :func:`exit_json` to report that the module has finished to Ansible.
+        """
+
         self.connect()
         yield
         self.exit_json()
@@ -436,6 +494,15 @@ class ForemanAnsibleModule(AnsibleModule):
 
     @_exception2fail_json(msg="Failed to connect to Foreman server: {0}")
     def connect(self):
+        """
+        Connect to the Foreman API.
+
+        This will create a new ``apypie.Api`` instance using the provided server information,
+        check that the API is actually reachable (by calling :func:`status`),
+        apply any required patches to the apidoc and ensure the server has all the plugins installed
+        that are required by the module.
+        """
+
         self.foremanapi = apypie.Api(
             uri=self._foremanapi_server_url,
             username=to_bytes(self._foremanapi_username),
@@ -445,15 +512,29 @@ class ForemanAnsibleModule(AnsibleModule):
         )
 
         self.status()
+        self.apply_apidoc_patches()
+        self.check_required_plugins()
+
+    def apply_apidoc_patches(self):
+        """
+        Apply patches to the local apidoc representation.
+        When adding another patch, consider that the endpoint in question may depend on a plugin to be available.
+        If possible, make the patch only execute on specific server/plugin versions.
+        """
 
         self._patch_templates_resource_name()
         self._patch_location_api()
         self._patch_subnet_rex_api()
 
-        self.check_required_plugins()
-
     @_exception2fail_json(msg="Failed to connect to Foreman server: {0}")
     def status(self):
+        """
+        Call the ``status`` API endpoint to ensure the server is reachable.
+
+        :return: The full API response
+        :rtype: dict
+        """
+
         return self.foremanapi.resource('home').call('status')
 
     def _resource(self, resource):
@@ -469,6 +550,17 @@ class ForemanAnsibleModule(AnsibleModule):
 
     @_exception2fail_json(msg='Failed to show resource: {0}')
     def show_resource(self, resource, resource_id, params=None):
+        """
+        Execute the ``show`` action on an entity.
+
+        :param resource: Plural name of the api resource to show
+        :type resource: str
+        :param resource_id: The ID of the entity to show
+        :type resource_id: int
+        :param params: Lookup parameters (i.e. parent_id for nested entities)
+        :type params: Union[dict,None], optional
+        """
+
         if params is None:
             params = {}
         else:
@@ -482,6 +574,17 @@ class ForemanAnsibleModule(AnsibleModule):
 
     @_exception2fail_json(msg='Failed to list resource: {0}')
     def list_resource(self, resource, search=None, params=None):
+        """
+        Execute the ``index`` action on an resource.
+
+        :param resource: Plural name of the api resource to show
+        :type resource: str
+        :param search: Search string as accepted by the API to limit the results
+        :type search: str, optional
+        :param params: Lookup parameters (i.e. parent_id for nested entities)
+        :type params: Union[dict,None], optional
+        """
+
         if params is None:
             params = {}
         else:
@@ -932,6 +1035,11 @@ class ForemanAnsibleModule(AnsibleModule):
 
     def exit_json(self, changed=False, **kwargs):
         kwargs['changed'] = changed or self.changed
+        if 'diff' not in kwargs and (self._before or self._after):
+            kwargs['diff'] = {'before': self._before,
+                              'after': self._after}
+        if 'entity' not in kwargs and self._after_full:
+            kwargs['entity'] = self._after_full
         super(ForemanAnsibleModule, self).exit_json(**kwargs)
 
     def has_plugin(self, plugin_name):
@@ -961,7 +1069,11 @@ class ForemanStatelessEntityAnsibleModule(ForemanAnsibleModule):
             class ForemanMyEntityModule(ForemanStatelessEntityAnsibleModule):
                 pass
 
+<<<<<<< HEAD
         and use that class to instanciate module::
+=======
+        and use that class to instantiate module::
+>>>>>>> theforeman-develop
 
             module = ForemanMyEntityModule(
                 argument_spec=dict(
@@ -1056,7 +1168,11 @@ class ForemanEntityAnsibleModule(ForemanStatelessEntityAnsibleModule):
             class ForemanMyEntityModule(ForemanEntityAnsibleModule):
                 pass
 
+<<<<<<< HEAD
         and use that class to instanciate module::
+=======
+        and use that class to instantiate module::
+>>>>>>> theforeman-develop
 
             module = ForemanMyEntityModule(
                 argument_spec=dict(
@@ -1115,24 +1231,24 @@ class ForemanEntityAnsibleModule(ForemanStatelessEntityAnsibleModule):
                 entity[blacklisted_field] = None
         return entity
 
-    def exit_json(self, **kwargs):
-        if 'diff' not in kwargs and (self._before or self._after):
-            kwargs['diff'] = {'before': self._before,
-                              'after': self._after}
-        if 'entity' not in kwargs and self._after_full:
-            kwargs['entity'] = self._after_full
-        super(ForemanEntityAnsibleModule, self).exit_json(**kwargs)
-
     @property
     def blacklisted_fields(self):
         return [key for key, value in self.foreman_spec.items() if value.get('no_log', False)]
 
 
 class ForemanTaxonomicAnsibleModule(TaxonomyMixin, ForemanAnsibleModule):
+    """
+    Combine :class:`ForemanAnsibleModule` with the :class:`TaxonomyMixin` Mixin.
+    """
+
     pass
 
 
 class ForemanTaxonomicEntityAnsibleModule(TaxonomyMixin, ForemanEntityAnsibleModule):
+    """
+    Combine :class:`ForemanEntityAnsibleModule` with the :class:`TaxonomyMixin` Mixin.
+    """
+
     pass
 
 
@@ -1170,10 +1286,20 @@ class ForemanScapDataStreamModule(ForemanTaxonomicEntityAnsibleModule):
 
 
 class KatelloAnsibleModule(KatelloMixin, ForemanAnsibleModule):
+    """
+    Combine :class:`ForemanAnsibleModule` with the :class:`KatelloMixin` Mixin.
+    """
+
     pass
 
 
 class KatelloEntityAnsibleModule(KatelloMixin, ForemanEntityAnsibleModule):
+    """
+    Combine :class:`ForemanEntityAnsibleModule` with the :class:`KatelloMixin` Mixin.
+
+    Enforces scoping of entities by ``organization`` as required by Katello.
+    """
+
     def __init__(self, **kwargs):
         entity_opts = kwargs.pop('entity_opts', {})
         if 'scope' not in entity_opts:
@@ -1185,7 +1311,7 @@ class KatelloEntityAnsibleModule(KatelloMixin, ForemanEntityAnsibleModule):
 
 def _foreman_spec_helper(spec):
     """Extend an entity spec by adding entries for all flat_names.
-    Extract ansible compatible argument_spec on the way.
+    Extract Ansible compatible argument_spec on the way.
     """
     foreman_spec = {}
     argument_spec = {}
@@ -1223,7 +1349,7 @@ def _foreman_spec_helper(spec):
     # We have to ensure that apypie is available before using it.
     # There is two cases where we can call _foreman_spec_helper() without apypie available:
     # * When the user calls the module but doesn't have the right Python libraries installed.
-    #   In this case nothing will works and the module will warn teh user to install the required library.
+    #   In this case nothing will works and the module will warn the user to install the required library.
     # * When Ansible generates docs from the argument_spec. As the inflector is only used to build foreman_spec and not argument_spec,
     #   This is not a problem.
     #
