@@ -67,20 +67,14 @@ interactions:
       User-Agent:
       - apypie (https://github.com/Apipie/apypie)
     method: GET
-    uri: https://foreman.example.org/api/smart_class_parameters?search=puppetclass_name%3Dntp+and+parameter%3Dservers&per_page=4294967296
+    uri: https://foreman.example.org/api/compute_profiles?search=name%3D%22app-small%22&per_page=4294967296
   response:
     body:
-      string: "{\n  \"total\": 1117,\n  \"subtotal\": 1,\n  \"page\": 1,\n  \"per_page\"\
-        : 4294967296,\n  \"search\": \"puppetclass_name=ntp and parameter=servers\"\
-        ,\n  \"sort\": {\n    \"by\": null,\n    \"order\": null\n  },\n  \"results\"\
-        : [{\"description\":\"\",\"override\":true,\"parameter_type\":\"array\",\"\
-        hidden_value?\":false,\"omit\":false,\"required\":false,\"validator_type\"\
-        :null,\"validator_rule\":null,\"merge_overrides\":true,\"merge_default\":true,\"\
-        avoid_duplicates\":true,\"override_value_order\":\"fqdn\\nhostgroup\\nos\\\
-        ndomain\",\"created_at\":\"2020-10-02 10:48:42 UTC\",\"updated_at\":\"2020-10-02\
-        \ 11:17:00 UTC\",\"parameter\":\"servers\",\"id\":1088,\"puppetclass_id\"\
-        :52,\"override_values_count\":0,\"default_value\":[\"foo.ntp.org\",\"bar.ntp.org\"\
-        ],\"puppetclass_name\":\"ntp\"}]\n}\n"
+      string: "{\n  \"total\": 4,\n  \"subtotal\": 1,\n  \"page\": 1,\n  \"per_page\"\
+        : 4294967296,\n  \"search\": \"name=\\\"app-small\\\"\",\n  \"sort\": {\n\
+        \    \"by\": null,\n    \"order\": null\n  },\n  \"results\": [{\"created_at\"\
+        :\"2020-10-02 06:28:25 UTC\",\"updated_at\":\"2020-10-02 06:28:25 UTC\",\"\
+        id\":6,\"name\":\"app-small\"}]\n}\n"
     headers:
       Cache-Control:
       - max-age=0, private, must-revalidate
@@ -117,7 +111,7 @@ interactions:
       X-XSS-Protection:
       - 1; mode=block
       content-length:
-      - '705'
+      - '280'
     status:
       code: 200
       message: OK
@@ -133,11 +127,12 @@ interactions:
       User-Agent:
       - apypie (https://github.com/Apipie/apypie)
     method: GET
-    uri: https://foreman.example.org/api/smart_class_parameters/1088
+    uri: https://foreman.example.org/api/compute_profiles/6
   response:
     body:
-      string: '{"description":"","override":true,"parameter_type":"array","hidden_value?":false,"omit":false,"required":false,"validator_type":null,"validator_rule":null,"merge_overrides":true,"merge_default":true,"avoid_duplicates":true,"override_value_order":"fqdn\nhostgroup\nos\ndomain","created_at":"2020-10-02
-        10:48:42 UTC","updated_at":"2020-10-02 11:17:00 UTC","parameter":"servers","id":1088,"puppetclass_id":52,"override_values_count":0,"default_value":["foo.ntp.org","bar.ntp.org"],"puppetclass_name":"ntp","environments":[{"id":1,"name":"production"}],"puppetclass":{"id":52,"name":"ntp","module_name":"ntp"},"override_values":[]}'
+      string: '{"created_at":"2020-10-02 06:28:25 UTC","updated_at":"2020-10-02 06:28:25
+        UTC","id":6,"name":"app-small","compute_attributes":[{"id":1,"name":"2 CPUs
+        and 2 GB memory","compute_resource_id":2,"compute_resource_name":"libvirt-cr01","provider_friendly_name":"Libvirt","compute_profile_id":6,"compute_profile_name":"app-small","vm_attrs":{"cpus":2,"memory":2147483648,"nics_attributes":{"0":{"type":"bridge","bridge":"","model":"virtio"}},"volumes_attributes":{"0":{"pool_name":"default","capacity":"10G","allocation":"0G","format_type":"raw"}}},"attributes":{"cpus":2,"memory":2147483648,"image_id":null,"image_name":null,"volumes_attributes":{"0":{"capacity":"10737418240","allocation":"0","format_type":"raw","pool":"default"}},"interfaces_attributes":{"0":{"type":"bridge","model":"virtio","bridge":""}}}}]}'
     headers:
       Cache-Control:
       - max-age=0, private, must-revalidate
@@ -174,12 +169,12 @@ interactions:
       X-XSS-Protection:
       - 1; mode=block
       content-length:
-      - '627'
+      - '807'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"override_value": {"match": "domain=example.com", "value": "[\"baz.ntp.org\"]"}}'
+    body: null
     headers:
       Accept:
       - application/json;version=2
@@ -187,18 +182,19 @@ interactions:
       - gzip, deflate
       Connection:
       - keep-alive
-      Content-Length:
-      - '81'
-      Content-Type:
-      - application/json
       User-Agent:
       - apypie (https://github.com/Apipie/apypie)
-    method: POST
-    uri: https://foreman.example.org/api/smart_class_parameters/1088/override_values
+    method: GET
+    uri: https://foreman.example.org/api/compute_resources?search=name%3D%22libvirt-cr01%22&per_page=4294967296
   response:
     body:
-      string: '{"created_at":"2020-10-02 11:17:02 UTC","updated_at":"2020-10-02 11:17:02
-        UTC","id":19,"match":"domain=example.com","value":["baz.ntp.org"],"omit":false}'
+      string: "{\n  \"total\": 2,\n  \"subtotal\": 1,\n  \"page\": 1,\n  \"per_page\"\
+        : 4294967296,\n  \"search\": \"name=\\\"libvirt-cr01\\\"\",\n  \"sort\": {\n\
+        \    \"by\": null,\n    \"order\": null\n  },\n  \"results\": [{\"description\"\
+        :null,\"url\":\"qemu+ssh://libvirtuser@localhost/system\",\"created_at\":\"\
+        2020-10-02 06:28:21 UTC\",\"updated_at\":\"2020-10-02 06:28:21 UTC\",\"id\"\
+        :2,\"name\":\"libvirt-cr01\",\"provider\":\"Libvirt\",\"provider_friendly_name\"\
+        :\"Libvirt\",\"display_type\":\"vnc\",\"set_console_password\":true}]\n}\n"
     headers:
       Cache-Control:
       - max-age=0, private, must-revalidate
@@ -222,8 +218,8 @@ interactions:
       - timeout=15, max=97
       Strict-Transport-Security:
       - max-age=631139040; includeSubdomains
-      Transfer-Encoding:
-      - chunked
+      Vary:
+      - Accept-Encoding
       X-Content-Type-Options:
       - nosniff
       X-Download-Options:
@@ -234,11 +230,13 @@ interactions:
       - none
       X-XSS-Protection:
       - 1; mode=block
+      content-length:
+      - '458'
     status:
-      code: 201
-      message: Created
+      code: 200
+      message: OK
 - request:
-    body: '{"override_value": {"match": "hostgroup=test_hostgroup", "omit": true}}'
+    body: null
     headers:
       Accept:
       - application/json;version=2
@@ -246,18 +244,17 @@ interactions:
       - gzip, deflate
       Connection:
       - keep-alive
-      Content-Length:
-      - '71'
-      Content-Type:
-      - application/json
       User-Agent:
       - apypie (https://github.com/Apipie/apypie)
-    method: POST
-    uri: https://foreman.example.org/api/smart_class_parameters/1088/override_values
+    method: GET
+    uri: https://foreman.example.org/api/compute_resources/2
   response:
     body:
-      string: '{"created_at":"2020-10-02 11:17:02 UTC","updated_at":"2020-10-02 11:17:02
-        UTC","id":20,"match":"hostgroup=test_hostgroup","value":null,"omit":true}'
+      string: '{"description":null,"url":"qemu+ssh://libvirtuser@localhost/system","created_at":"2020-10-02
+        06:28:21 UTC","updated_at":"2020-10-02 06:28:21 UTC","id":2,"name":"libvirt-cr01","provider":"Libvirt","provider_friendly_name":"Libvirt","display_type":"vnc","set_console_password":true,"images":[],"compute_attributes":[{"id":1,"name":"2
+        CPUs and 2 GB memory","compute_resource_id":2,"compute_resource_name":"libvirt-cr01","provider_friendly_name":"Libvirt","compute_profile_id":6,"compute_profile_name":"app-small","vm_attrs":{"cpus":2,"memory":2147483648,"nics_attributes":{"0":{"type":"bridge","bridge":"","model":"virtio"}},"volumes_attributes":{"0":{"pool_name":"default","capacity":"10G","allocation":"0G","format_type":"raw"}}},"attributes":{"cpus":2,"memory":2147483648,"image_id":null,"image_name":null,"volumes_attributes":{"0":{"capacity":"10737418240","allocation":"0","format_type":"raw","pool":"default"}},"interfaces_attributes":{"0":{"type":"bridge","model":"virtio","bridge":""}}}}],"locations":[{"id":64,"name":"Test
+        Location","title":"Test Location","description":null}],"organizations":[{"id":63,"name":"Test
+        Organization","title":"Test Organization","description":"A test organization"}]}'
     headers:
       Cache-Control:
       - max-age=0, private, must-revalidate
@@ -281,8 +278,8 @@ interactions:
       - timeout=15, max=96
       Strict-Transport-Security:
       - max-age=631139040; includeSubdomains
-      Transfer-Encoding:
-      - chunked
+      Vary:
+      - Accept-Encoding
       X-Content-Type-Options:
       - nosniff
       X-Download-Options:
@@ -293,7 +290,9 @@ interactions:
       - none
       X-XSS-Protection:
       - 1; mode=block
+      content-length:
+      - '1203'
     status:
-      code: 201
-      message: Created
+      code: 200
+      message: OK
 version: 1
